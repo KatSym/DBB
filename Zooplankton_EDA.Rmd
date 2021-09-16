@@ -1,0 +1,353 @@
+---
+title: "Zooplankton EDA"
+author: "Katerina Symiakaki"
+date: "Created on 02/09/2021. Last update on `r format(Sys.time(), '%d/%m/%Y')`."
+output: html_document
+---
+
+```{r setup, echo=F, warning=F, message=F}
+library(tidyverse)
+library(rstatix)
+```
+
+```{r data cleanup, echo=F, warning=F, message=F}
+zoo_counts_raw = read.csv("Data//zoopl_counts.csv", header = T, stringsAsFactors = T)
+
+adults = zoo_counts_raw %>% 
+  select(Acartia, Centropages, Paracalanus, Paracalanus_like, Clausocalanus, 
+         Temora, Isias_clavipes,Isias_clavipes.like, Corycaeus, Oithona_red_feather,
+         Oithona_similis.like, Oithona_nana.like, Oithona_somenthing, Cyclopidae, 
+         Harpacticoida, Clytemnestra.like, Microsetella.like, Euterpina) %>% 
+  mutate(Adults = rowSums(.))
+
+sum_zoo = zoo_counts_raw %>% 
+  mutate(Juveniles = rowSums(select(., ends_with("juv")))) %>% 
+  select(Day, Mesocosm, Volume, Juveniles, Nauplii, Eggs)
+         
+sum_zoo$Adults = adults$Adults
+rm(adults)
+
+abd_zoo = sum_zoo[2:109,] %>% 
+  mutate(Cops = Adults + Juveniles) %>% 
+  pivot_longer(cols = c(Cops, Juveniles, Nauplii, Eggs, Adults)) %>% 
+  mutate(time = str_remove(Day, ".") %>%  # make Day a number - if needed
+           as.integer()) %>%
+  mutate(Abund = value*1000/Volume) %>% 
+  select(-Volume, -value) %>% 
+  mutate(Treatment = gsub("[[:digit:]]", "", Mesocosm),
+         Treatment = factor(Treatment, levels = c("C", "A", "P", "B"))) %>%    # NOT THE BEST WAY TO DO IT  
+  mutate(Replicate = gsub("[^[:digit:]]", "", Mesocosm)) %>% 
+  pivot_wider(names_from = name, values_from = Abund, values_fn = list(counts = sum))
+# separate(Mesocosm, into = c("Treat", "repl"), remove = F)
+
+g = sprintf("%02d",abd_zoo$time)
+abd_zoo$nDay=paste0("T", g)
+
+```
+
+#  {.tabset}
+
+```{r separete dfs, echo=F, warning=F, message=F}
+B_zoo = abd_zoo %>% 
+  filter(Treatment %in% c("C", "B"))
+
+AP_zoo = abd_zoo %>% 
+  filter(Treatment %in% c("C", "A", "P"))
+
+ap_col = c("grey40", "#4472C4", "#70AD47")
+b_col = c("grey40", "#C45A11")
+# Zoo_stages <- as.character(sort(unique(abd_zoo$name)))
+
+```
+
+## AQUAdrugs {#AQUAdrugs}
+
+### {.tabset .tabset-dropdown}
+#### Adults
+
+```{r AP Ad plot, echo=F, warning=F, message=F}
+
+ggplot(AP_zoo, aes(x = nDay, y = Adults, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = ap_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Adults per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+#### Juveniles
+
+```{r AP Ju plot, echo=F, warning=F, message=F}
+
+ggplot(AP_zoo, aes(x = nDay, y = Juveniles, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = ap_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Juveniles per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+
+#### Copepods
+```{r AP cops plot, echo=F, warning=F, message=F}
+
+ggplot(AP_zoo, aes(x = nDay, y = Cops, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = ap_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Copepods per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+
+#### Nauplii
+```{r AP Naup plot, echo=F, warning=F, message=F}
+
+ggplot(AP_zoo, aes(x = nDay, y = Nauplii, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = ap_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+    ylab(expression("Nauplii per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+#### Eggs
+```{r AP Egg plot, echo=F, warning=F, message=F}
+
+ggplot(AP_zoo, aes(x = nDay, y = Eggs, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = ap_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+    ylab(expression("Eggs per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+## BrownMed {#BrownMed}
+
+### {.tabset .tabset-dropdown}
+#### Adults
+
+```{r B Ad plot, echo=F, warning=F, message=F}
+
+ggplot(B_zoo, aes(x = nDay, y = Adults, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = b_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Adults per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+#### Juveniles
+
+```{r B Ju plot, echo=F, warning=F, message=F}
+
+ggplot(B_zoo, aes(x = nDay, y = Juveniles, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = b_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Juveniles per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+#### Copepods
+
+```{r B cops plot, echo=F, warning=F, message=F}
+
+ggplot(B_zoo, aes(x = nDay, y = Cops, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = b_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Copepods per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+#### Nauplii
+```{r B Naup plot, echo=F, warning=F, message=F}
+
+ggplot(B_zoo, aes(x = nDay, y = Nauplii, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = b_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Nauplii per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+#### Eggs
+```{r B Egg plot, echo=F, warning=F, message=F}
+
+ggplot(B_zoo, aes(x = nDay, y = Eggs, fill = Treatment)) +
+  geom_boxplot()+
+  scale_fill_manual(values = b_col)+
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Day")+
+  ylab(expression("Eggs per"~"m"^{"3"}))+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"), 
+        # axis.text.x = element_text(size = 17, colour = "black"),
+        # axis.text.y = element_text(size = 17, colour = "black"), 
+        # axis.title = element_text(size = 15),
+        # legend.title = element_text("Treatment", size = 15),
+        # legend.text = element_text(size = 15),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+ 
+```
+
+
+
+<!-- # Stats -->
+```{r}
+# stat_AP = AP_zoo %>% 
+#   select(-Replicate, -Day) %>% 
+#   pivot_longer(cols = c(Cops, Juveniles, Nauplii, Eggs, Adults)) %>% 
+#   mutate(ID = rownames(.)) %>% 
+#   rstatix::convert_as_factor(nDay, ID) %>% 
+#   rename(ABD = value, Gr = name) %>% 
+#   as.data.frame()
+# 
+# stat_B = B_zoo %>% 
+#   select(-Replicate, -Day) %>%
+#   pivot_longer(cols = c(Cops, Juveniles, Nauplii, Eggs, Adults)) %>% 
+#   mutate(ID = rownames(.)) %>% 
+#   rstatix::convert_as_factor(nDay, ID) %>% 
+#   rename(ABD = value, Gr = name) %>% 
+#   as.data.frame()
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# res.aov.ap <- stat_AP %>% 
+#   filter(Gr == "Cops") %>% 
+#   group_by(Treatment) %>% 
+#   anova_test(
+#   data = stat_AP, dv = ABD, wid = ID,
+#   within = nDay
+#   )
+# get_anova_table(res.aov.ap)
+# 
+# 
+# 
+# cps= stat_B %>% 
+#   filter(Gr == "Nauplii") %>% 
+#   # filter(Treatment != "A") %>% 
+#   glmmTMB(ABD~ nDay + Treatment 
+#           + (1|Mesocosm) 
+#           # + ar1(nDay + 0 | Mesocosm)
+#           ,family = nbinom2
+#            # ,control=glmmTMBControl(optimizer=optim, optArgs=list(method="BFGS"))
+#           ,data=.)
+# 
+# summary(cps)
+# 
+# cps_simres = simulateResiduals(cps, n = 1000)
+# plot(cps_simres, quantreg = T)
+# testDispersion(cps_simres)
+# check_model(cps)
+
+```
+
+
